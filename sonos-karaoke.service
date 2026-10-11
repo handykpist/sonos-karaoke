@@ -1,0 +1,13 @@
+[Unit]
+Description=Sonos Karaoke Server & TV Cast Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 server.py
+WorkingDirectory=%h/.local/share/sonos-karaoke
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

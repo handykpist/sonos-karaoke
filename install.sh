@@ -75,3 +75,4 @@ echo "[+] Successfully installed Sonos Karaoke Extension!"
 echo "    • TV Display:       http://localhost:5050/tv"
 echo "    • Controller:       http://localhost:5050/controller"
 echo "    • Terminal Command: sonos-karaoke"
+

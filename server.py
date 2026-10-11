@@ -56,8 +56,13 @@ class KaraokeHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         # Suppress spammy polling logs, log only errors or major actions
-        if "GET /api/" not in args[0] and "200" not in args[1]:
+        try:
+            msg = format % args if args else str(format)
+            if "/api/status" in msg or "/api/rooms" in msg:
+                return
             super().log_message(format, *args)
+        except Exception:
+            pass
 
     def do_HEAD(self):
         self.do_GET()
@@ -70,6 +75,11 @@ class KaraokeHandler(SimpleHTTPRequestHandler):
         if path == "/":
             self.send_response(302)
             self.send_header("Location", "/tv")
+            self.end_headers()
+            return
+
+        elif path == "/favicon.ico":
+            self.send_response(204)
             self.end_headers()
             return
 
@@ -91,6 +101,8 @@ class KaraokeHandler(SimpleHTTPRequestHandler):
             return
 
         elif path == "/api/rooms":
+            if query.get("refresh", ["0"])[0] in ("1", "true"):
+                self.server.tracker.discover_speakers(save_cache=True)
             rooms = self.server.tracker.get_speakers_list()
             active = self.server.tracker.active_room
             self.send_json({"rooms": rooms, "active": active})
@@ -175,6 +187,11 @@ class KaraokeHandler(SimpleHTTPRequestHandler):
                 self.send_json({"success": ok, "room": room_name})
             else:
                 self.send_json({"success": False, "error": "Missing room name"}, status=400)
+            return
+
+        elif path in ("/api/rooms/refresh", "/api/discover"):
+            rooms = self.server.tracker.discover_speakers(save_cache=True)
+            self.send_json({"success": True, "rooms": rooms, "active": self.server.tracker.active_room})
             return
 
         elif path == "/api/offset":

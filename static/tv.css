@@ -1101,3 +1101,317 @@ body.mode-all .lyric-line.hidden-line {
     border-color: transparent;
 }
 
+/* Lyrics Language Header Button & Badge */
+#btn-lyrics-lang {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+#btn-lyrics-lang:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+}
+
+.badge-count {
+    background: rgba(56, 189, 248, 0.25);
+    color: #38bdf8;
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+/* Lyrics Modal Dialog */
+.lyrics-modal-dialog {
+    max-width: 720px;
+    width: 92%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    overflow-y: auto;
+}
+
+.lyrics-pref-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    padding: 1rem 1.2rem;
+    border-radius: 1rem;
+    gap: 1rem;
+}
+
+.lyrics-pref-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.pref-label {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.pref-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.modal-section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.5rem;
+}
+
+.versions-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.lyrics-versions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 0.4rem;
+}
+
+.version-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 0.9rem 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.version-card:hover {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.4);
+    transform: translateY(-1px);
+}
+
+.version-card.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: #38bdf8;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+}
+
+.version-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1;
+}
+
+.version-top-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.lang-tag {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.source-tag {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.synced-pill {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.synced-pill.plain {
+    background: rgba(234, 179, 8, 0.2);
+    color: #facc15;
+    border-color: rgba(234, 179, 8, 0.4);
+}
+
+.version-preview-snippet {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 480px;
+}
+
+.btn-choose-version {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.version-card:hover .btn-choose-version {
+    background: #38bdf8;
+    color: #0b0f19;
+    border-color: #38bdf8;
+}
+
+.version-card.active .btn-choose-version {
+    background: #38bdf8;
+    color: #0b0f19;
+    border-color: #38bdf8;
+}
+
+/* Custom & Local File Accordion */
+.custom-lyrics-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.custom-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.9rem 1.2rem;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+    transition: background 0.15s ease;
+}
+
+.custom-card-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-card-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.custom-card-title span:first-child {
+    font-weight: 700;
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.accordion-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.accordion-chevron {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+}
+
+.custom-card-header.open .accordion-chevron {
+    transform: rotate(180deg);
+}
+
+.custom-card-body {
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.custom-help {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.upload-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.btn-file-upload {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+}
+
+.btn-file-upload:hover {
+    background: rgba(56, 189, 248, 0.25);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+.file-name-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-family: monospace;
+}
+
+#local-lrc-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(10, 15, 26, 0.9);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    color: #e2e8f0;
+    padding: 0.75rem;
+    font-family: monospace;
+    font-size: 0.85rem;
+    resize: vertical;
+}
+
+#local-lrc-textarea:focus {
+    outline: none;
+    border-color: #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.custom-action-row {
+    display: flex;
+    justify-content: flex-end;
+}
+

@@ -102,6 +102,12 @@ async function pollStatus() {
                 syncedTag.textContent = data.lyrics.synced ? "SYNCED LRC" : (data.lyrics.estimated ? "AUTO-TIMED" : "PLAIN TEXT");
                 syncedTag.style.background = data.lyrics.synced ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)";
                 syncedTag.style.color = data.lyrics.synced ? "#4ade80" : "#facc15";
+
+                const langTag = document.getElementById("lang-tag");
+                if (langTag && data.lyrics.language) {
+                    langTag.textContent = `${data.lyrics.language.flag || '🌐'} ${data.lyrics.language.native || data.lyrics.language.name || 'Lyrics'}`;
+                    langTag.style.display = "inline-block";
+                }
                 renderLyricsPreview(currentLyrics);
             } else {
                 currentLyrics = [];
@@ -112,6 +118,12 @@ async function pollStatus() {
             syncedTag.textContent = data.lyrics.synced ? "SYNCED LRC" : (data.lyrics.estimated ? "AUTO-TIMED" : "PLAIN TEXT");
             syncedTag.style.background = data.lyrics.synced ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)";
             syncedTag.style.color = data.lyrics.synced ? "#4ade80" : "#facc15";
+
+            const langTag = document.getElementById("lang-tag");
+            if (langTag && data.lyrics.language) {
+                langTag.textContent = `${data.lyrics.language.flag || '🌐'} ${data.lyrics.language.native || data.lyrics.language.name || 'Lyrics'}`;
+                langTag.style.display = "inline-block";
+            }
             renderLyricsPreview(currentLyrics);
         }
     } catch (e) {
@@ -292,21 +304,146 @@ async function setOffset(val) {
     offsetVal.textContent = `${timingOffset >= 0 ? '+' : ''}${timingOffset.toFixed(1)}s`;
 }
 
-// Custom lyrics modal
+// Custom lyrics & Local File modal
+const ctrlLocalLrcFile = document.getElementById("ctrl-local-lrc-file");
+const ctrlFileName = document.getElementById("ctrl-file-name");
+
+if (ctrlLocalLrcFile) {
+    ctrlLocalLrcFile.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (ctrlFileName) ctrlFileName.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (customLyricsText) customLyricsText.value = event.target.result;
+        };
+        reader.readAsText(file);
+    });
+}
+
 btnCustomLyrics.addEventListener("click", () => customModal.classList.add("open"));
 btnCancelCustom.addEventListener("click", () => customModal.classList.remove("open"));
 btnSaveCustom.addEventListener("click", async () => {
     const text = customLyricsText.value.trim();
     if (text) {
-        await fetch("/api/lyrics/override", {
+        const filename = (ctrlLocalLrcFile && ctrlLocalLrcFile.files[0]) ? ctrlLocalLrcFile.files[0].name : "";
+        await fetch("/api/lyrics/save_local", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lrc: text, title: mainTitle.textContent, artist: mainArtist.textContent })
+            body: JSON.stringify({ lrc: text, title: mainTitle.textContent, artist: mainArtist.textContent, filename: filename })
         });
         customModal.classList.remove("open");
         pollStatus();
     }
 });
+
+// Versions Modal & Language Selector
+const btnVersions = document.getElementById("btn-versions");
+const versionsModal = document.getElementById("versions-modal");
+const btnCloseVersions = document.getElementById("btn-close-versions");
+const ctrlVersionsList = document.getElementById("ctrl-versions-list");
+const ctrlLangSelect = document.getElementById("ctrl-lang-select");
+
+if (btnVersions) {
+    btnVersions.addEventListener("click", async () => {
+        if (!versionsModal) return;
+        versionsModal.classList.add("open");
+
+        // Load language preference
+        try {
+            const lRes = await fetch("/api/lyrics/languages");
+            if (lRes.ok) {
+                const lData = await lRes.json();
+                if (ctrlLangSelect && lData.languages) {
+                    ctrlLangSelect.innerHTML = "";
+                    lData.languages.forEach(l => {
+                        const opt = document.createElement("option");
+                        opt.value = l.code;
+                        opt.textContent = `${l.flag} ${l.name}`;
+                        if (l.code === lData.preferred) opt.selected = true;
+                        ctrlLangSelect.appendChild(opt);
+                    });
+                }
+            }
+        } catch (e) {}
+
+        loadControllerVersions();
+    });
+}
+
+if (btnCloseVersions) {
+    btnCloseVersions.addEventListener("click", () => versionsModal && versionsModal.classList.remove("open"));
+}
+
+if (ctrlLangSelect) {
+    ctrlLangSelect.addEventListener("change", async (e) => {
+        await fetch("/api/lyrics/preference", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ preferredLanguage: e.target.value })
+        });
+        loadControllerVersions();
+        pollStatus();
+    });
+}
+
+async function loadControllerVersions() {
+    if (!ctrlVersionsList) return;
+    ctrlVersionsList.innerHTML = `<div style="padding: 1rem; color: #94a3b8; text-align: center;">Searching versions...</div>`;
+
+    try {
+        const res = await fetch(`/api/lyrics/versions?title=${encodeURIComponent(mainTitle.textContent)}&artist=${encodeURIComponent(mainArtist.textContent)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const versions = data.versions || [];
+
+        if (versions.length === 0) {
+            ctrlVersionsList.innerHTML = `<div style="padding: 1rem; color: #94a3b8; text-align: center;">No alternative versions found. Use Custom/Local button to upload.</div>`;
+            return;
+        }
+
+        ctrlVersionsList.innerHTML = "";
+        versions.forEach(v => {
+            const row = document.createElement("div");
+            const isActive = v.active || v.id === data.currentVersionId;
+            row.style.background = isActive ? "rgba(56, 189, 248, 0.15)" : "rgba(255, 255, 255, 0.05)";
+            row.style.border = isActive ? "1px solid #38bdf8" : "1px solid var(--border-color)";
+            row.style.borderRadius = "0.75rem";
+            row.style.padding = "0.75rem 1rem";
+            row.style.display = "flex";
+            row.style.justifyContent = "space-between";
+            row.style.alignItems = "center";
+            row.style.cursor = "pointer";
+
+            const lang = v.language || { name: "Unknown", flag: "🌐" };
+            const prev = (v.preview && v.preview.length > 0) ? v.preview[0] : "";
+
+            row.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 0.2rem; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-weight: 700; font-size: 0.9rem;">${lang.flag || '🌐'} ${lang.native || lang.name || 'Lyrics'}</span>
+                        <span style="font-size: 0.8rem; color: #94a3b8;">${v.sourceLabel || v.source || ''}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">${prev}</div>
+                </div>
+                <button class="btn-primary" style="padding: 0.35rem 0.8rem; font-size: 0.8rem;">${isActive ? 'Active ✓' : 'Select'}</button>
+            `;
+
+            row.addEventListener("click", async () => {
+                await fetch("/api/lyrics/choose", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ versionId: v.id, title: mainTitle.textContent, artist: mainArtist.textContent })
+                });
+                versionsModal.classList.remove("open");
+                pollStatus();
+            });
+            ctrlVersionsList.appendChild(row);
+        });
+    } catch (e) {
+        ctrlVersionsList.innerHTML = `<div style="padding: 1rem; color: #ef4444; text-align: center;">Error loading versions</div>`;
+    }
+}
 
 loadRooms();
 loadDisplays();

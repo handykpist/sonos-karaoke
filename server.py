@@ -27,11 +27,19 @@ import qrcode
 try:
     from karaoke.sonos_tracker import SonosTracker
     from karaoke.cast_manager import CastManager
-    from karaoke.lyrics import fetch_lyrics
+    from karaoke.lyrics import (
+        fetch_lyrics, fetch_all_lyric_versions, save_local_lyric_file,
+        get_language_preference, set_language_preference, set_song_preference,
+        LANG_MAP
+    )
 except ImportError:
     from sonos_tracker import SonosTracker
     from cast_manager import CastManager
-    from lyrics import fetch_lyrics
+    from lyrics import (
+        fetch_lyrics, fetch_all_lyric_versions, save_local_lyric_file,
+        get_language_preference, set_language_preference, set_song_preference,
+        LANG_MAP
+    )
 
 PORT = 5050
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -127,6 +135,32 @@ class KaraokeHandler(SimpleHTTPRequestHandler):
             self.send_json(lyrics)
             return
 
+        elif path == "/api/lyrics/versions":
+            track = query.get("title", [""])[0]
+            artist = query.get("artist", [""])[0]
+            album = query.get("album", [""])[0]
+            dur = float(query.get("duration", ["0"])[0])
+            if not track:
+                st = self.server.tracker.get_state()
+                track, artist, album, dur = st["title"], st["artist"], st["album"], st["duration"]
+            lyrics = fetch_lyrics(track, artist, dur, album)
+            self.send_json({
+                "title": track,
+                "artist": artist,
+                "currentVersionId": lyrics.get("currentVersionId"),
+                "language": lyrics.get("language"),
+                "versions": lyrics.get("availableVersions", [])
+            })
+            return
+
+        elif path == "/api/lyrics/languages":
+            pref = get_language_preference()
+            langs = [{"code": "auto", "name": "Auto (Original / Native)", "flag": "🌐"}]
+            for code, info in LANG_MAP.items():
+                langs.append({"code": code, "name": f"{info['name']} ({info['native']})", "flag": info["flag"]})
+            self.send_json({"preferred": pref, "languages": langs})
+            return
+
         elif path == "/api/albumart":
             st = self.server.tracker.get_state()
             art_url = st.get("albumArt")
@@ -214,24 +248,51 @@ class KaraokeHandler(SimpleHTTPRequestHandler):
             self.send_json(res)
             return
 
-        elif path == "/api/lyrics/override":
-            # Allow user to paste custom lyrics or manual LRC
+        elif path == "/api/lyrics/choose":
+            version_id = payload.get("versionId", "")
+            title = payload.get("title", "")
+            artist = payload.get("artist", "")
+            album = payload.get("album", "")
+            dur = float(payload.get("duration", 0))
+            if not title:
+                st = self.server.tracker.get_state()
+                title, artist, album, dur = st["title"], st["artist"], st["album"], st["duration"]
+
+            set_song_preference(artist, title, version_id)
+            updated = fetch_lyrics(title, artist, dur, album, chosen_version_id=version_id)
+            with self.server.tracker.lock:
+                if self.server.tracker.current_state["title"] == title:
+                    self.server.tracker.current_state["lyrics"] = updated
+            self.send_json({"success": True, "versionId": version_id, "lyrics": updated})
+            return
+
+        elif path in ("/api/lyrics/save_local", "/api/lyrics/override"):
+            # Saves custom or local .lrc file into ~/.config/sonos-karaoke/lyrics
             custom_lrc = payload.get("lrc", "")
             title = payload.get("title", "")
             artist = payload.get("artist", "")
-            from karaoke.lyrics import parse_lrc
-            lines = parse_lrc(custom_lrc, 0)
-            override_data = {
-                "found": True,
-                "synced": True,
-                "matchedTitle": title,
-                "matchedArtist": artist,
-                "lines": lines,
-                "raw": custom_lrc
-            }
+            filename = payload.get("filename", "")
+            if not title:
+                st = self.server.tracker.get_state()
+                title, artist = st["title"], st["artist"]
+
+            updated = save_local_lyric_file(title, artist, custom_lrc, filename)
             with self.server.tracker.lock:
-                self.server.tracker.current_state["lyrics"] = override_data
-            self.send_json({"success": True, "lines": len(lines)})
+                if self.server.tracker.current_state["title"] == title:
+                    self.server.tracker.current_state["lyrics"] = updated
+            self.send_json({"success": True, "versionId": updated.get("currentVersionId"), "lyrics": updated})
+            return
+
+        elif path == "/api/lyrics/preference":
+            lang = payload.get("preferredLanguage", "auto")
+            set_language_preference(lang)
+            st = self.server.tracker.get_state()
+            if st["title"]:
+                updated = fetch_lyrics(st["title"], st["artist"], st["duration"], st["album"])
+                with self.server.tracker.lock:
+                    if self.server.tracker.current_state["title"] == st["title"]:
+                        self.server.tracker.current_state["lyrics"] = updated
+            self.send_json({"success": True, "preferredLanguage": lang})
             return
 
         self.send_error(404, "Endpoint not found")

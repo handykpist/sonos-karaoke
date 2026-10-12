@@ -104,8 +104,12 @@
                     <div class="preview-title">
                         <span>LIVE KARAOKE LYRICS</span>
                         <span class="synced-tag" id="synced-tag">SYNCED LRC</span>
+                        <span class="synced-tag" id="lang-tag" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">🌐 Language</span>
                     </div>
-                    <button id="btn-custom-lyrics" class="btn-text">Paste Custom Lyrics</button>
+                    <div class="header-btn-group" style="display: flex; gap: 0.6rem;">
+                        <button id="btn-versions" class="btn-text">🌐 Choose Version</button>
+                        <button id="btn-custom-lyrics" class="btn-text">📁 Custom / Local</button>
+                    </div>
                 </div>
 
                 <div class="lyrics-scroll-box" id="lyrics-scroll-box">
@@ -120,12 +124,43 @@
     <!-- Custom Lyrics Modal -->
     <div class="modal-backdrop" id="custom-modal">
         <div class="modal-dialog">
-            <h3>Custom Lyrics / Manual Sync</h3>
-            <p>Paste any song lyrics or LRC timecoded format to sing along:</p>
-            <textarea id="custom-lyrics-text" rows="12" placeholder="[00:15.20] First line of song&#10;[00:20.50] Second line of song..."></textarea>
+            <h3>Custom Lyrics / Local .LRC</h3>
+            <p>Upload a local .lrc file (supports Swedish & foreign characters å, ä, ö, é, ñ) or paste timecoded text:</p>
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <label class="btn-secondary" style="cursor: pointer;">
+                    <span>Choose .LRC file</span>
+                    <input type="file" id="ctrl-local-lrc-file" accept=".lrc,.txt" style="display: none;">
+                </label>
+                <span id="ctrl-file-name" style="font-size: 0.85rem; color: #94a3b8; font-family: monospace;">No file chosen</span>
+            </div>
+            <textarea id="custom-lyrics-text" rows="10" placeholder="[00:15.20] First line of song&#10;[00:20.50] Second line of song..."></textarea>
             <div class="modal-buttons">
                 <button id="btn-cancel-custom" class="btn-secondary">Cancel</button>
-                <button id="btn-save-custom" class="btn-primary">Apply Lyrics</button>
+                <button id="btn-save-custom" class="btn-primary">Apply & Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Versions Chooser Modal -->
+    <div class="modal-backdrop" id="versions-modal">
+        <div class="modal-dialog" style="max-width: 600px;">
+            <h3>🌐 Choose Lyrics Language & Version</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 0.75rem 1rem; border-radius: 0.75rem;">
+                <span style="font-size: 0.9rem; font-weight: 600;">Preferred Language:</span>
+                <select id="ctrl-lang-select" style="background: #0f121d; color: #fff; border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; border-radius: 0.5rem;">
+                    <option value="auto">🌐 Auto / Native</option>
+                    <option value="sv">🇸🇪 Swedish (Svenska)</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="es">🇪🇸 Spanish (Español)</option>
+                    <option value="de">🇩🇪 German (Deutsch)</option>
+                    <option value="fr">🇫🇷 French (Français)</option>
+                </select>
+            </div>
+            <div class="versions-scroll" id="ctrl-versions-list" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 280px; overflow-y: auto;">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-close-versions" class="btn-secondary">Close</button>
             </div>
         </div>
     </div>

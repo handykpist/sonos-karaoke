@@ -90,6 +90,30 @@ const micEchoVal = document.getElementById("mic-echo-val");
 const micPassthroughToggle = document.getElementById("mic-passthrough-toggle");
 const micDeviceSelect = document.getElementById("mic-device-select");
 
+// Lyrics Language & Version Elements
+const btnLyricsLang = document.getElementById("btn-lyrics-lang");
+const lyricsLangFlag = document.getElementById("lyrics-lang-flag");
+const lyricsLangLabel = document.getElementById("lyrics-lang-label");
+const lyricsVersionsCount = document.getElementById("lyrics-versions-count");
+const lyricsModal = document.getElementById("lyrics-modal");
+const btnCloseLyricsModal = document.getElementById("btn-close-lyrics-modal");
+const btnDoneLyrics = document.getElementById("btn-done-lyrics");
+const lyricsModalSubtitle = document.getElementById("lyrics-modal-subtitle");
+const lyricsLangSelect = document.getElementById("lyrics-lang-select");
+const versionsBadgeCount = document.getElementById("versions-badge-count");
+const lyricsVersionsList = document.getElementById("lyrics-versions-list");
+const customAccordionToggle = document.getElementById("custom-accordion-toggle");
+const customAccordionBody = document.getElementById("custom-accordion-body");
+const accordionChevron = document.getElementById("accordion-chevron");
+const localLrcFile = document.getElementById("local-lrc-file");
+const selectedFileName = document.getElementById("selected-file-name");
+const localLrcTextarea = document.getElementById("local-lrc-textarea");
+const btnSaveLocalLrc = document.getElementById("btn-save-local-lrc");
+
+let currentLyricsData = null;
+let currentTrackTitle = "";
+let currentTrackArtist = "";
+
 function getLinesModeLabel(mode) {
     switch (mode) {
         case "2": return "Lines: 2 (Ultra)";
@@ -175,6 +199,13 @@ async function pollStatus() {
         const hasLyrics = Boolean(data.lyrics && data.lyrics.lines && data.lyrics.lines.length > 0);
         const lyricsRaw = (data.lyrics && data.lyrics.raw) || "";
 
+        if (data.lyrics) {
+            currentLyricsData = data.lyrics;
+            currentTrackTitle = data.title || "";
+            currentTrackArtist = data.artist || "";
+            updateLyricsLangUI(data.lyrics);
+        }
+
         if (newTrackId !== currentTrackId) {
             currentTrackId = newTrackId;
             currentLyricsRaw = lyricsRaw;
@@ -194,6 +225,11 @@ async function pollStatus() {
 }
 
 function onTrackChanged(data) {
+    currentLyricsData = data.lyrics || null;
+    currentTrackTitle = data.title || "";
+    currentTrackArtist = data.artist || "";
+    updateLyricsLangUI(data.lyrics);
+
     if (trackTitle) trackTitle.textContent = data.title || "No Track Playing";
     if (trackArtist) trackArtist.textContent = data.artist || "Sonos Audio";
     document.title = data.title ? `${data.title} - Sonos Karaoke` : "Sonos Karaoke TV";
@@ -918,6 +954,226 @@ async function openRoomModal() {
     }
 }
 
+// =========================================================================
+// 5. Lyrics Language & Alternative Versions Chooser
+// =========================================================================
+
+function updateLyricsLangUI(lyricsData) {
+    if (!lyricsData) return;
+    const lang = lyricsData.language;
+    if (lang && lyricsLangLabel) {
+        lyricsLangLabel.textContent = `Lyrics: ${lang.native || lang.name || "Auto"}`;
+    }
+    if (lang && lyricsLangFlag) {
+        lyricsLangFlag.textContent = lang.flag || "🌐";
+    }
+    const versions = lyricsData.availableVersions || [];
+    if (lyricsVersionsCount) {
+        if (versions.length > 1) {
+            lyricsVersionsCount.textContent = versions.length;
+            lyricsVersionsCount.style.display = "inline-block";
+        } else {
+            lyricsVersionsCount.style.display = "none";
+        }
+    }
+}
+
+async function openLyricsModal() {
+    if (!lyricsModal) return;
+    lyricsModal.classList.add("open");
+    if (lyricsModalSubtitle) {
+        lyricsModalSubtitle.textContent = currentTrackTitle ? `${currentTrackTitle} — ${currentTrackArtist}` : "Choose song lyrics version or language";
+    }
+
+    // Load available languages from server
+    try {
+        const langRes = await fetch("/api/lyrics/languages");
+        if (langRes.ok) {
+            const langData = await langRes.json();
+            if (lyricsLangSelect && langData.languages) {
+                lyricsLangSelect.innerHTML = "";
+                langData.languages.forEach(l => {
+                    const opt = document.createElement("option");
+                    opt.value = l.code;
+                    opt.textContent = `${l.flag} ${l.name}`;
+                    if (l.code === langData.preferred) opt.selected = true;
+                    lyricsLangSelect.appendChild(opt);
+                });
+            }
+        }
+    } catch (e) {}
+
+    renderVersionsList();
+}
+
+async function renderVersionsList() {
+    if (!lyricsVersionsList) return;
+    lyricsVersionsList.innerHTML = `<div style="padding: 1rem; color: #94a3b8; text-align: center;">Searching available lyric versions...</div>`;
+
+    let versions = (currentLyricsData && currentLyricsData.availableVersions) || [];
+    let currentVerId = (currentLyricsData && currentLyricsData.currentVersionId) || "";
+
+    try {
+        const res = await fetch(`/api/lyrics/versions?title=${encodeURIComponent(currentTrackTitle)}&artist=${encodeURIComponent(currentTrackArtist)}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.versions && data.versions.length > 0) {
+                versions = data.versions;
+                currentVerId = data.currentVersionId || currentVerId;
+            }
+        }
+    } catch (e) {}
+
+    if (versionsBadgeCount) {
+        versionsBadgeCount.textContent = `${versions.length} found`;
+    }
+
+    if (versions.length === 0) {
+        lyricsVersionsList.innerHTML = `<div style="padding: 1rem; color: #94a3b8; text-align: center;">No alternative online versions found. You can upload or paste a local .lrc file below!</div>`;
+        return;
+    }
+
+    lyricsVersionsList.innerHTML = "";
+    versions.forEach(v => {
+        const card = document.createElement("div");
+        const isActive = v.active || v.id === currentVerId;
+        card.className = `version-card ${isActive ? "active" : ""}`;
+
+        const lang = v.language || { name: "Unknown", flag: "🌐" };
+        const previewText = (v.preview && v.preview.length > 0) ? v.preview.join(" • ") : "No preview available";
+
+        card.innerHTML = `
+            <div class="version-meta">
+                <div class="version-top-row">
+                    <span class="lang-tag">${lang.flag || "🌐"} ${lang.native || lang.name || "Lyrics"}</span>
+                    <span class="source-tag">${v.sourceLabel || v.source || ""}</span>
+                    <span class="synced-pill ${v.synced ? "" : "plain"}">${v.synced ? "⏱️ Synced" : "📄 Plain Text"}</span>
+                </div>
+                <div class="version-preview-snippet" title="${previewText}">${previewText}</div>
+            </div>
+            <button class="btn-choose-version">${isActive ? "✓ Active" : "Select"}</button>
+        `;
+
+        card.addEventListener("click", () => selectLyricVersion(v.id));
+        lyricsVersionsList.appendChild(card);
+    });
+}
+
+async function selectLyricVersion(versionId) {
+    try {
+        const res = await fetch("/api/lyrics/choose", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                versionId: versionId,
+                title: currentTrackTitle,
+                artist: currentTrackArtist
+            })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.lyrics) {
+                currentLyricsData = data.lyrics;
+                currentLyricsRaw = data.lyrics.raw || "";
+                currentLyrics = data.lyrics.lines || [];
+                renderLyrics(currentLyrics);
+                updateLyricsLangUI(currentLyricsData);
+                renderVersionsList();
+            }
+        }
+    } catch (e) {
+        console.error("Failed to choose lyric version:", e);
+    }
+}
+
+// Event Listeners for Lyrics & Language Modal
+if (btnLyricsLang) btnLyricsLang.addEventListener("click", openLyricsModal);
+if (btnCloseLyricsModal) btnCloseLyricsModal.addEventListener("click", () => lyricsModal && lyricsModal.classList.remove("open"));
+if (btnDoneLyrics) btnDoneLyrics.addEventListener("click", () => lyricsModal && lyricsModal.classList.remove("open"));
+
+if (customAccordionToggle) {
+    customAccordionToggle.addEventListener("click", () => {
+        const isClosed = customAccordionBody.style.display === "none";
+        customAccordionBody.style.display = isClosed ? "flex" : "none";
+        customAccordionToggle.classList.toggle("open", isClosed);
+    });
+}
+
+if (localLrcFile) {
+    localLrcFile.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (selectedFileName) selectedFileName.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (localLrcTextarea) localLrcTextarea.value = event.target.result;
+        };
+        reader.readAsText(file);
+    });
+}
+
+if (btnSaveLocalLrc) {
+    btnSaveLocalLrc.addEventListener("click", async () => {
+        const text = localLrcTextarea ? localLrcTextarea.value.trim() : "";
+        if (!text) {
+            alert("Please paste or upload lyrics text first.");
+            return;
+        }
+        btnSaveLocalLrc.textContent = "Saving...";
+        btnSaveLocalLrc.disabled = true;
+        try {
+            const filename = (localLrcFile && localLrcFile.files[0]) ? localLrcFile.files[0].name : "";
+            const res = await fetch("/api/lyrics/save_local", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    lrc: text,
+                    title: currentTrackTitle,
+                    artist: currentTrackArtist,
+                    filename: filename
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.lyrics) {
+                    currentLyricsData = data.lyrics;
+                    currentLyricsRaw = data.lyrics.raw || "";
+                    currentLyrics = data.lyrics.lines || [];
+                    renderLyrics(currentLyrics);
+                    updateLyricsLangUI(currentLyricsData);
+                    renderVersionsList();
+                }
+                btnSaveLocalLrc.textContent = "✓ Saved & Applied!";
+                setTimeout(() => {
+                    btnSaveLocalLrc.textContent = "Save Local Lyrics & Apply";
+                    btnSaveLocalLrc.disabled = false;
+                }, 2000);
+            } else {
+                btnSaveLocalLrc.textContent = "Error saving";
+                btnSaveLocalLrc.disabled = false;
+            }
+        } catch (e) {
+            btnSaveLocalLrc.textContent = "Error saving";
+            btnSaveLocalLrc.disabled = false;
+        }
+    });
+}
+
+if (lyricsLangSelect) {
+    lyricsLangSelect.addEventListener("change", async (e) => {
+        const langCode = e.target.value;
+        try {
+            await fetch("/api/lyrics/preference", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ preferredLanguage: langCode })
+            });
+            renderVersionsList();
+            pollStatus();
+        } catch (e) {}
+    });
+}
+
 // Keyboard shortcuts
 window.addEventListener("keydown", (e) => {
     // Prevent interfering with modal inputs
@@ -933,6 +1189,14 @@ window.addEventListener("keydown", (e) => {
         cycleLinesMode();
     } else if (e.key === "m" || e.key === "M") {
         toggleMicrophone();
+    } else if (e.key === "y" || e.key === "Y") {
+        if (lyricsModal) {
+            if (lyricsModal.classList.contains("open")) {
+                lyricsModal.classList.remove("open");
+            } else {
+                openLyricsModal();
+            }
+        }
     } else if (e.key === "s" || e.key === "S") {
         if (syncDock) syncDock.classList.toggle("open");
     } else if (e.key === " ") {

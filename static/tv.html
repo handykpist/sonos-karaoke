@@ -37,6 +37,11 @@
                         <span class="vu-bar"></span>
                     </div>
                 </button>
+                <button id="btn-lyrics-lang" class="action-btn" title="Choose Lyric Language & Versions (Y)">
+                    <span id="lyrics-lang-flag">🌐</span>
+                    <span id="lyrics-lang-label">Lyrics: Auto</span>
+                    <span id="lyrics-versions-count" class="badge-count" style="display: none;">1</span>
+                </button>
                 <button id="btn-lines-mode" class="action-btn" title="Toggle visible lines (L)">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/></svg>
                     <span id="lines-mode-label">Lines: 3 (Focus)</span>
@@ -258,7 +263,78 @@
         </div>
     </div>
 
-    <script src="/tv.js?v=2.2"></script>
+    <!-- Lyrics Language & Version Picker Modal -->
+    <div class="modal-backdrop" id="lyrics-modal">
+        <div class="modal-dialog lyrics-modal-dialog">
+            <div class="modal-header-row">
+                <div class="modal-title-wrap">
+                    <h3>🌐 Lyrics & Language Selection</h3>
+                    <div class="modal-subtitle" id="lyrics-modal-subtitle">Choose song lyrics version or language</div>
+                </div>
+                <button id="btn-close-lyrics-modal" class="modal-close-icon">&times;</button>
+            </div>
+
+            <!-- Language Preference -->
+            <div class="lyrics-pref-card">
+                <div class="lyrics-pref-info">
+                    <span class="pref-label">Preferred Lyrics Language</span>
+                    <span class="pref-desc">Auto-selects this language when available for any song</span>
+                </div>
+                <select id="lyrics-lang-select" class="custom-select">
+                    <option value="auto">🌐 Auto (Original / Native Language)</option>
+                    <option value="sv">🇸🇪 Swedish (Svenska)</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="es">🇪🇸 Spanish (Español)</option>
+                    <option value="de">🇩🇪 German (Deutsch)</option>
+                    <option value="fr">🇫🇷 French (Français)</option>
+                    <option value="it">🇮🇹 Italian (Italiano)</option>
+                    <option value="no">🇳🇴 Norwegian (Norsk)</option>
+                    <option value="ja">🇯🇵 Japanese (日本語)</option>
+                </select>
+            </div>
+
+            <!-- Available Versions List -->
+            <div class="modal-section-title">
+                <span>Available Lyric Versions for Current Song</span>
+                <span class="versions-badge" id="versions-badge-count">0 found</span>
+            </div>
+            <div class="lyrics-versions-list" id="lyrics-versions-list">
+                <!-- Dynamically populated version cards -->
+            </div>
+
+            <!-- Local / Custom LRC Upload & Paste Accordion -->
+            <div class="custom-lyrics-card">
+                <div class="custom-card-header" id="custom-accordion-toggle">
+                    <div class="custom-card-title">
+                        <span>📁 Local File or Paste Custom .LRC</span>
+                        <span class="accordion-hint">Click to upload or edit local lyrics</span>
+                    </div>
+                    <span class="accordion-chevron" id="accordion-chevron">▼</span>
+                </div>
+                <div class="custom-card-body" id="custom-accordion-body" style="display: none;">
+                    <p class="custom-help">Support for local song .lrc files with full Swedish/international characters (å, ä, ö, é, ñ). Upload or paste below:</p>
+                    <div class="upload-row">
+                        <label class="btn-file-upload">
+                            <span>📄 Choose Local .LRC File</span>
+                            <input type="file" id="local-lrc-file" accept=".lrc,.txt" style="display: none;">
+                        </label>
+                        <span id="selected-file-name" class="file-name-label">No file selected</span>
+                    </div>
+                    <textarea id="local-lrc-textarea" rows="6" placeholder="[00:21.28] Så du är en tvilling, jag visste det,&#10;[00:25.57] Det såg jag nästan direkt..."></textarea>
+                    <div class="custom-action-row">
+                        <button id="btn-save-local-lrc" class="btn-primary">Save Local Lyrics & Apply</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-row">
+                <div class="modal-shortcut-hint">Shortcut: Press <b>Y</b> anytime to open this menu</div>
+                <button id="btn-done-lyrics" class="btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/tv.js?v=2.3"></script>
 </body>
 </html>
 

@@ -28,6 +28,15 @@
             </div>
 
             <div class="header-actions">
+                <button id="btn-mic" class="action-btn mic-action-btn" title="Microphone Settings (M)">
+                    <span id="mic-icon-status">🎤</span>
+                    <span id="mic-status-label">Mic: OFF</span>
+                    <div class="mic-vu-mini" id="mic-vu-mini">
+                        <span class="vu-bar"></span>
+                        <span class="vu-bar"></span>
+                        <span class="vu-bar"></span>
+                    </div>
+                </button>
                 <button id="btn-lines-mode" class="action-btn" title="Toggle visible lines (L)">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/></svg>
                     <span id="lines-mode-label">Lines: 3 (Focus)</span>
@@ -36,8 +45,8 @@
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 2h2v3h-2v-3zm3 3h3v3h-3v-3zm-2 2h2v2h-2v-2zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2z"/></svg>
                     <span>Party QR</span>
                 </button>
-                <button id="btn-offset" class="action-btn" title="Sync Offset">
-                    <span id="offset-label">Sync: 0.0s</span>
+                <button id="btn-offset" class="action-btn" title="Live Sync Calibration (S or [ / ])">
+                    <span id="offset-label">Sync: +0.0s</span>
                 </button>
                 <button id="btn-fullscreen" class="action-btn" title="Toggle Fullscreen (F)">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
@@ -69,6 +78,42 @@
                 </div>
             </div>
         </main>
+
+        <!-- Floating Interactive Sync Calibration Dock -->
+        <div class="sync-dock" id="sync-dock">
+            <div class="sync-dock-header">
+                <div class="sync-dock-title">
+                    <span class="sync-icon">⏱️</span>
+                    <span>Live Sync Calibration</span>
+                    <span class="sync-badge" id="sync-badge-val">+0.00s</span>
+                    <span class="sync-save-tag" id="sync-save-tag">Saved for Track</span>
+                </div>
+                <div class="sync-dock-actions">
+                    <button class="btn-tap-sync" id="btn-tap-sync" title="Press Space or Tap when you hear the line start">
+                        🎯 Tap to Sync Current Line
+                    </button>
+                    <button class="btn-close-dock" id="btn-close-sync-dock" title="Close Calibration Bar">✕</button>
+                </div>
+            </div>
+            <div class="sync-dock-controls">
+                <button class="btn-nudge" data-delta="-0.5">-0.5s</button>
+                <button class="btn-nudge" data-delta="-0.1">-0.1s</button>
+                <div class="sync-slider-wrapper">
+                    <input type="range" id="sync-slider" min="-3.0" max="3.0" step="0.05" value="0.0">
+                    <div class="slider-marks">
+                        <span>-3s (Earlier)</span>
+                        <span>0.0s (Default)</span>
+                        <span>+3s (Later)</span>
+                    </div>
+                </div>
+                <button class="btn-nudge" data-delta="0.1">+0.1s</button>
+                <button class="btn-nudge" data-delta="0.5">+0.5s</button>
+                <button class="btn-nudge btn-reset" id="btn-reset-sync">Reset</button>
+            </div>
+            <div class="sync-dock-hint">
+                💡 <b>Tip:</b> Tap <i>"Tap to Sync Current Line"</i> (or press <b>Space</b>) the exact instant the singer begins the line to lock timing! Use <b>[</b> and <b>]</b> for quick adjustments.
+            </div>
+        </div>
 
         <!-- Bottom Now Playing Bar -->
         <footer class="now-playing-bar">
@@ -105,6 +150,91 @@
         </footer>
     </div>
 
+    <!-- Microphone Settings Modal -->
+    <div class="modal-backdrop" id="mic-modal">
+        <div class="modal-card mic-modal-card">
+            <div class="modal-header-row">
+                <div class="modal-title-group">
+                    <span class="modal-icon">🎤</span>
+                    <div>
+                        <h3>Karaoke Microphone</h3>
+                        <p>Sing live using your computer, unit, or external mic</p>
+                    </div>
+                </div>
+                <button id="btn-close-mic" class="btn-close-x">✕</button>
+            </div>
+
+            <!-- Master Toggle Row -->
+            <div class="mic-toggle-card">
+                <div class="toggle-info">
+                    <div class="toggle-title">Microphone Status</div>
+                    <div class="toggle-desc" id="mic-status-desc">Enable live singing audio input</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="mic-master-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+            <!-- Live Voice Level VU Meter -->
+            <div class="vu-meter-box">
+                <div class="vu-label">
+                    <span>Voice Level VU</span>
+                    <span id="vu-peak-label">0%</span>
+                </div>
+                <div class="vu-meter-track" id="vu-meter-track">
+                    <div class="vu-meter-fill" id="vu-meter-fill"></div>
+                </div>
+            </div>
+
+            <!-- Sliders Grid -->
+            <div class="mic-sliders-grid">
+                <!-- Volume / Gain -->
+                <div class="mic-slider-group">
+                    <div class="control-header">
+                        <label for="mic-gain-slider">Mic Volume</label>
+                        <span id="mic-gain-val">100%</span>
+                    </div>
+                    <input type="range" id="mic-gain-slider" min="0" max="200" step="5" value="100">
+                </div>
+
+                <!-- Echo / Reverb -->
+                <div class="mic-slider-group">
+                    <div class="control-header">
+                        <label for="mic-echo-slider">Karaoke Echo / Reverb</label>
+                        <span id="mic-echo-val">30% (Stage)</span>
+                    </div>
+                    <input type="range" id="mic-echo-slider" min="0" max="100" step="5" value="30">
+                </div>
+            </div>
+
+            <!-- Hear Self Passthrough -->
+            <div class="mic-passthrough-card">
+                <div class="toggle-info">
+                    <div class="toggle-title">Hear Voice on TV / Speakers</div>
+                    <div class="toggle-desc">Routes singing audio out to TV HDMI or connected speakers</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="mic-passthrough-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+            <!-- Device Selector -->
+            <div class="mic-device-group">
+                <label for="mic-device-select">Input Microphone Device</label>
+                <select id="mic-device-select" class="custom-select">
+                    <option value="default">Default System Microphone</option>
+                </select>
+            </div>
+
+            <div class="modal-footer-row">
+                <div class="mic-shortcut-hint">Shortcuts: <b>M</b> toggles mic | <b>[</b> and <b>]</b> adjust sync</div>
+                <button id="btn-done-mic" class="btn-primary">Done</button>
+            </div>
+        </div>
+    </div>
+
     <!-- QR Code Modal Overlay -->
     <div class="modal-backdrop" id="qr-modal">
         <div class="modal-card">
@@ -128,7 +258,7 @@
         </div>
     </div>
 
-    <script src="/tv.js?v=2.1"></script>
+    <script src="/tv.js?v=2.2"></script>
 </body>
 </html>
 

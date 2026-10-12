@@ -97,6 +97,7 @@ class KaraokeHandler(SimpleHTTPRequestHandler):
             state["port"] = PORT
             state["tvUrl"] = f"http://{LOCAL_IP}:{PORT}/tv"
             state["timingOffset"] = self.server.timing_offset
+            state["serverNow"] = time.time()
             self.send_json(state)
             return
 

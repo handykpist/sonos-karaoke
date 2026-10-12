@@ -311,10 +311,14 @@ class SonosTracker:
             s_tag = trans_xml.split("<CurrentTransportState>")[1].split("</CurrentTransportState>")[0]
             state = s_tag.strip()
 
-        # 2. Position info
+        # 2. Position info with RTT measurement
+        t0 = time.time()
         pos_xml = self._soap_call(ip, "/MediaRenderer/AVTransport/Control", "AVTransport", "GetPositionInfo")
+        t1 = time.time()
+        measured_time = t0 + ((t1 - t0) / 2.0)
+
         if not pos_xml:
-            return {"state": state, "position": 0.0, "duration": 0.0, "title": "", "artist": "", "album": "", "albumArt": ""}
+            return {"state": state, "position": 0.0, "duration": 0.0, "title": "", "artist": "", "album": "", "albumArt": "", "measuredTime": measured_time}
 
         rel_time = 0.0
         track_dur = 0.0
@@ -361,7 +365,8 @@ class SonosTracker:
             "title": title,
             "artist": artist,
             "album": album,
-            "albumArt": album_art
+            "albumArt": album_art,
+            "measuredTime": measured_time
         }
 
     def update_cycle(self):
@@ -418,8 +423,9 @@ class SonosTracker:
             self.current_state["albumArt"] = data["albumArt"]
 
             # Update syncTime when position ticks, playback state changes, or track changes
+            measured_t = data.get("measuredTime", now)
             if data["position"] != prev_pos or data["state"] != prev_state or data["title"] != prev_title or not self.current_state["syncTime"]:
-                self.current_state["syncTime"] = now
+                self.current_state["syncTime"] = measured_t
 
             if data["title"] != prev_title or data["artist"] != prev_artist:
                 self.current_state["title"] = data["title"]
@@ -452,8 +458,11 @@ class SonosTracker:
             try:
                 self.update_cycle()
             except Exception as e:
-                time.sleep(0.5)
-            time.sleep(0.75)
+                time.sleep(0.4)
+
+            with self.lock:
+                is_playing = self.current_state.get("state") == "PLAYING"
+            time.sleep(0.35 if is_playing else 0.8)
 
 if __name__ == "__main__":
     tracker = SonosTracker()

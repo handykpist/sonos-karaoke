@@ -446,3 +446,4 @@ if __name__ == "__main__":
     print(f"Track: {st['title']} by {st['artist']} ({st['position']}/{st['duration']}s)")
     if st["lyrics"]:
         print(f"Lyrics loaded: {st['lyrics']['synced']}, lines: {len(st['lyrics']['lines'])}")
+

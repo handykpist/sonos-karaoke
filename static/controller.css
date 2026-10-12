@@ -410,12 +410,18 @@ body {
 }
 
 .preview-line {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-muted);
     transition: all 0.25s ease;
-    padding: 0.4rem 0.8rem;
+    padding: 0.5rem 0.8rem;
     border-radius: 0.5rem;
+    opacity: 0.25;
+}
+
+.preview-line.past {
+    opacity: 0.45;
+    font-size: 1.15rem;
 }
 
 .preview-line.active {
@@ -424,6 +430,19 @@ body {
     font-weight: 800;
     font-size: 1.55rem;
     border-left: 4px solid var(--accent);
+    opacity: 1;
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.15);
+}
+
+.preview-line.next-line {
+    color: rgba(255, 255, 255, 0.85);
+    opacity: 0.75;
+    font-size: 1.3rem;
+}
+
+.preview-line.distant {
+    opacity: 0.18;
 }
 
 /* Modals */

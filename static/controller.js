@@ -155,11 +155,17 @@ function syncLoop() {
             activeIndex = newIdx;
             const lineEls = lyricsPreviewTrack.querySelectorAll(".preview-line");
             lineEls.forEach(el => {
-                if (parseInt(el.dataset.index) === activeIndex) {
+                const idx = parseInt(el.dataset.index);
+                el.classList.remove("active", "past", "next-line", "distant");
+                if (idx === activeIndex) {
                     el.classList.add("active");
                     el.scrollIntoView({ behavior: "smooth", block: "center" });
+                } else if (idx === activeIndex - 1) {
+                    el.classList.add("past");
+                } else if (idx === activeIndex + 1) {
+                    el.classList.add("next-line");
                 } else {
-                    el.classList.remove("active");
+                    el.classList.add("distant");
                 }
             });
         }

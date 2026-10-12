@@ -14,6 +14,7 @@ let activeRoom = "Sonos";
 
 let activeLineIndex = -1;
 let lastScrollY = 0;
+let linesMode = localStorage.getItem("karaoke_lines_mode") || "3"; // "3" (Focus), "2" (Ultra), "4" (Context), "all"
 
 // Elements
 const ambientBg = document.getElementById("ambient-bg");
@@ -30,11 +31,27 @@ const totalTimeEl = document.getElementById("total-time");
 const progressBarFill = document.getElementById("progress-bar-fill");
 const activeRoomName = document.getElementById("active-room-name");
 const offsetLabel = document.getElementById("offset-label");
+const btnLinesMode = document.getElementById("btn-lines-mode");
+const linesModeLabel = document.getElementById("lines-mode-label");
 const qrModal = document.getElementById("qr-modal");
 const qrUrlText = document.getElementById("qr-url-text");
 const roomModal = document.getElementById("room-modal");
 const roomList = document.getElementById("room-list");
 const visualizer = document.getElementById("visualizer");
+
+function getLinesModeLabel(mode) {
+    switch (mode) {
+        case "2": return "Lines: 2 (Ultra)";
+        case "3": return "Lines: 3 (Focus)";
+        case "4": return "Lines: 4 (Context)";
+        case "all": return "Lines: All";
+        default: return "Lines: 3 (Focus)";
+    }
+}
+
+if (linesModeLabel) {
+    linesModeLabel.textContent = getLinesModeLabel(linesMode);
+}
 
 function formatTime(secs) {
     if (isNaN(secs) || secs < 0) return "0:00";
@@ -119,11 +136,13 @@ function renderLyrics(lines) {
         div.dataset.time = line.time;
         div.dataset.endTime = line.endTime;
         div.dataset.type = line.type;
+        div.dataset.rawText = line.text || "";
 
         if (line.type === "break") {
             div.textContent = "";
             div.style.height = "0";
             div.style.margin = "0";
+            div.style.padding = "0";
         } else {
             div.textContent = line.text;
         }
@@ -193,17 +212,39 @@ function updateActiveLine(newIndex) {
     const lineEls = lyricsTrack.querySelectorAll(".lyric-line");
 
     lineEls.forEach((el, idx) => {
-        el.classList.remove("active", "upcoming", "past");
+        el.classList.remove("active", "next-line", "upcoming", "past", "hidden-line");
+        const raw = el.dataset.rawText || el.textContent;
+
         if (idx === activeLineIndex) {
             el.classList.add("active");
-            // Wrap text in glowing span
-            if (!el.querySelector(".glow-word") && el.textContent.trim()) {
-                el.innerHTML = `<span class="glow-word">${el.textContent}</span>`;
+            if (raw.trim()) {
+                el.innerHTML = `<span class="now-sing-badge"><span class="mic-wave">🎤</span> SING NOW</span><span class="glow-word">${raw}</span>`;
             }
-        } else if (idx === activeLineIndex + 1 || idx === activeLineIndex + 2) {
-            el.classList.add("upcoming");
-        } else if (idx < activeLineIndex) {
-            el.classList.add("past");
+        } else {
+            el.textContent = raw;
+
+            if (idx === activeLineIndex - 1) {
+                if (linesMode === "2") {
+                    // Ultra 2-line mode: hide past line completely
+                    el.classList.add("hidden-line");
+                } else {
+                    el.classList.add("past");
+                }
+            } else if (idx === activeLineIndex + 1) {
+                el.classList.add("next-line");
+            } else if (idx === activeLineIndex + 2) {
+                if (linesMode === "4" || linesMode === "all") {
+                    el.classList.add("upcoming");
+                } else {
+                    el.classList.add("hidden-line");
+                }
+            } else if (linesMode === "all") {
+                if (idx < activeLineIndex) el.classList.add("past");
+                else el.classList.add("upcoming");
+            } else {
+                // All other lines are completely hidden for clear focus
+                el.classList.add("hidden-line");
+            }
         }
     });
 
@@ -216,6 +257,23 @@ function updateActiveLine(newIndex) {
         const targetScroll = -(elOffset - (stageHeight / 2) + (elHeight / 2));
         lyricsTrack.style.transform = `translateY(${targetScroll}px)`;
     }
+}
+
+function cycleLinesMode() {
+    const modes = ["3", "2", "4", "all"];
+    const curIdx = modes.indexOf(linesMode);
+    linesMode = modes[(curIdx + 1) % modes.length];
+    localStorage.setItem("karaoke_lines_mode", linesMode);
+    if (linesModeLabel) {
+        linesModeLabel.textContent = getLinesModeLabel(linesMode);
+    }
+    if (activeLineIndex !== -1) {
+        updateActiveLine(activeLineIndex);
+    }
+}
+
+if (btnLinesMode) {
+    btnLinesMode.addEventListener("click", cycleLinesMode);
 }
 
 // 3. User Controls & Modals

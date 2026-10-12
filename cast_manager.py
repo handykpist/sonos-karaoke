@@ -51,6 +51,10 @@ class CastManager:
                         "ip": str(c.cast_info.host),
                         "cast_supported": True
                     })
+                    try:
+                        c.disconnect(blocking=False)
+                    except Exception:
+                        pass
                 pychromecast.discovery.stop_discovery(browser)
             except Exception as e:
                 print(f"[!] Cast discovery notice: {e}")
@@ -70,7 +74,7 @@ class CastManager:
             return {"success": False, "error": "pychromecast library not installed"}
 
         try:
-            casts, browser = pychromecast.get_listed_chromecasts(friendly_names=[friendly_name], timeout=3.5)
+            casts, browser = pychromecast.get_listed_chromecasts(friendly_names=[friendly_name], timeout=4.0)
             if not casts:
                 pychromecast.discovery.stop_discovery(browser)
                 return {"success": False, "error": f"Display '{friendly_name}' not found on network"}
@@ -83,7 +87,8 @@ class CastManager:
             dashcast.launch()
             dashcast.load_url(target_url, force=True)
             self.active_cast = friendly_name
-            pychromecast.discovery.stop_discovery(browser)
+            self._active_cast_obj = cast
+            self._active_browser = browser
             return {"success": True, "device": friendly_name, "url": target_url}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -92,13 +97,20 @@ class CastManager:
         if not HAVE_PYCHROMECAST:
             return {"success": False, "error": "pychromecast library not installed"}
         try:
-            casts, browser = pychromecast.get_listed_chromecasts(friendly_names=[friendly_name], timeout=3.5)
-            if casts:
-                cast = casts[0]
-                cast.wait(timeout=5.0)
-                cast.quit_app()
-                self.active_cast = None
-            pychromecast.discovery.stop_discovery(browser)
+            if hasattr(self, "_active_cast_obj") and self._active_cast_obj:
+                try:
+                    self._active_cast_obj.quit_app()
+                    self._active_cast_obj.disconnect(blocking=False)
+                except Exception:
+                    pass
+                self._active_cast_obj = None
+            if hasattr(self, "_active_browser") and self._active_browser:
+                try:
+                    pychromecast.discovery.stop_discovery(self._active_browser)
+                except Exception:
+                    pass
+                self._active_browser = None
+            self.active_cast = None
             return {"success": True}
         except Exception as e:
             return {"success": False, "error": str(e)}

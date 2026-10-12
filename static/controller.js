@@ -88,14 +88,16 @@ async function pollStatus() {
             tvUrlPill.textContent = data.tvUrl;
         }
 
-        const newId = `${data.artist} - ${data.title}`;
+        const newId = `${data.artist || ""} - ${data.title || ""}`.trim();
+        const hasLyrics = Boolean(data.lyrics && data.lyrics.lines && data.lyrics.lines.length > 0);
+
         if (newId !== currentTrackId) {
             currentTrackId = newId;
             mainTitle.textContent = data.title || "No Track Playing";
             mainArtist.textContent = data.artist || "Sonos Audio";
             mainArt.src = data.albumArt ? `/api/albumart?t=${Date.now()}` : "/img/vinyl.png";
 
-            if (data.lyrics && data.lyrics.lines) {
+            if (hasLyrics) {
                 currentLyrics = data.lyrics.lines;
                 syncedTag.textContent = data.lyrics.synced ? "SYNCED LRC" : (data.lyrics.estimated ? "AUTO-TIMED" : "PLAIN TEXT");
                 syncedTag.style.background = data.lyrics.synced ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)";
@@ -103,8 +105,14 @@ async function pollStatus() {
                 renderLyricsPreview(currentLyrics);
             } else {
                 currentLyrics = [];
-                lyricsPreviewTrack.innerHTML = `<div class="preview-line">Searching lyrics...</div>`;
+                lyricsPreviewTrack.innerHTML = `<div class="preview-line">${data.title ? "Searching lyrics..." : "Waiting for track..."}</div>`;
             }
+        } else if (hasLyrics && currentLyrics.length === 0) {
+            currentLyrics = data.lyrics.lines;
+            syncedTag.textContent = data.lyrics.synced ? "SYNCED LRC" : (data.lyrics.estimated ? "AUTO-TIMED" : "PLAIN TEXT");
+            syncedTag.style.background = data.lyrics.synced ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)";
+            syncedTag.style.color = data.lyrics.synced ? "#4ade80" : "#facc15";
+            renderLyricsPreview(currentLyrics);
         }
     } catch (e) {
         console.warn(e);

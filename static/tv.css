@@ -33,23 +33,23 @@ body.tv-mode {
 /* Dynamic Ambient Glow */
 .ambient-glow {
     position: fixed;
-    top: -20%;
-    left: -20%;
-    width: 140%;
-    height: 140%;
+    top: -25%;
+    left: -25%;
+    width: 150%;
+    height: 150%;
     background-size: cover;
     background-position: center;
-    filter: blur(120px) brightness(0.35) saturate(1.8);
+    filter: blur(90px) brightness(0.65) saturate(2.4);
     opacity: 0.85;
     z-index: 1;
-    transition: background-image 1.2s ease-in-out, opacity 1s ease;
+    transition: background-image 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.8s ease;
     transform: translateZ(0);
 }
 
 .ambient-overlay {
     position: fixed;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(10, 12, 20, 0.2) 0%, rgba(10, 12, 20, 0.85) 100%);
+    background: radial-gradient(circle at 50% 45%, rgba(12, 16, 28, 0.35) 0%, rgba(8, 10, 18, 0.85) 65%, rgba(5, 7, 12, 0.95) 100%);
     z-index: 2;
 }
 
@@ -173,8 +173,31 @@ body.tv-mode {
     justify-content: center;
     align-items: center;
     margin: 0.5rem 0;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+    width: 100%;
+}
+
+.lyrics-stage::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(to bottom, #07090e 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 5;
+}
+
+.lyrics-stage::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(to top, #07090e 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 5;
 }
 
 .lyrics-track {
@@ -183,9 +206,14 @@ body.tv-mode {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.8rem;
-    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+    gap: 1.6rem;
+    transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
     will-change: transform;
+    padding: 1rem 1.5rem;
+}
+
+body:not(.mode-all) .lyrics-track {
+    transform: none !important;
 }
 
 /* Individual Lyric Lines */
@@ -197,14 +225,12 @@ body.tv-mode {
     font-weight: 700;
     line-height: 1.3;
     color: var(--text-dim);
-    transition: opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
-                transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
-                font-size 0.3s ease,
-                filter 0.3s ease;
+    transition: opacity 0.25s ease,
+                transform 0.25s ease,
+                font-size 0.25s ease;
     cursor: default;
-    opacity: 0.15;
-    transform: scale(0.9);
-    filter: blur(1.5px);
+    opacity: 0.2;
+    transform: scale(0.92);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -213,44 +239,47 @@ body.tv-mode {
 
 /* Past Line (Line -1) - Faded previous context */
 .lyric-line.past {
-    color: rgba(255, 255, 255, 0.3);
-    font-size: clamp(1.6rem, 2.5vw, 2.3rem);
-    font-weight: 600;
-    opacity: 0.32;
-    filter: blur(0.6px);
-    transform: scale(0.92);
+    color: rgba(255, 255, 255, 0.35) !important;
+    font-size: clamp(1.6rem, 2.4vw, 2.3rem) !important;
+    font-weight: 600 !important;
+    opacity: 0.35 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: scale(0.92) !important;
 }
 
 /* Next Line (Line +1) - Clear preview for the singer */
 .lyric-line.next-line {
-    color: rgba(255, 255, 255, 0.72);
-    font-size: clamp(2.1rem, 3.5vw, 3.2rem);
-    font-weight: 700;
-    opacity: 0.72;
-    filter: blur(0px);
-    transform: scale(0.98);
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: clamp(2rem, 3.4vw, 3rem) !important;
+    font-weight: 700 !important;
+    opacity: 0.8 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: scale(0.98) !important;
 }
 
 /* Upcoming Line (Line +2 in expanded mode) */
 .lyric-line.upcoming {
-    color: rgba(255, 255, 255, 0.32);
-    font-size: clamp(1.5rem, 2.2vw, 2rem);
-    font-weight: 600;
-    opacity: 0.3;
-    filter: blur(1px);
-    transform: scale(0.9);
+    color: rgba(255, 255, 255, 0.38) !important;
+    font-size: clamp(1.5rem, 2.2vw, 2rem) !important;
+    font-weight: 600 !important;
+    opacity: 0.38 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: scale(0.9) !important;
 }
 
 /* Active Line (Line 0) - HUGE, ILLUMINATED, UNMISTAKABLE FOCUS */
 .lyric-line.active {
-    color: #ffffff;
-    font-size: clamp(3.2rem, 5.8vw, 5.2rem);
-    font-weight: 900;
-    line-height: 1.2;
+    color: #ffffff !important;
+    font-size: clamp(3rem, 5.5vw, 5rem) !important;
+    font-weight: 900 !important;
+    line-height: 1.25 !important;
     opacity: 1 !important;
     visibility: visible !important;
-    filter: blur(0px) !important;
-    transform: scale(1.08) !important;
+    filter: none !important;
+    transform: scale(1.06) !important;
     text-shadow: 0 0 50px var(--accent-glow), 0 0 16px rgba(255, 255, 255, 0.85);
     z-index: 10;
 }
@@ -290,30 +319,32 @@ body.tv-mode {
     font-size: 1.15em;
 }
 
-/* Completely Hidden Lines - Zero screen clutter */
-.lyric-line.hidden-line {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-    transform: scale(0.7) !important;
-    transition: opacity 0.25s ease, transform 0.25s ease;
+/* Distant / Non-active lines */
+body:not(.mode-all) .lyric-line.hidden-line {
+    display: none !important;
+}
+
+body.mode-all .lyric-line.hidden-line {
+    opacity: 0.12 !important;
+    visibility: visible !important;
+    transform: scale(0.85);
+    display: flex !important;
 }
 
 /* Instrumental Countdown Banner */
 .instrumental-banner {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%) scale(0.9);
-    background: rgba(18, 24, 38, 0.85);
-    border: 2px solid var(--accent-karaoke);
-    box-shadow: 0 0 40px var(--accent-glow);
-    padding: 1.5rem 3rem;
-    border-radius: 2rem;
+    position: relative;
+    background: rgba(15, 21, 38, 0.94);
+    border: 2px solid rgba(56, 189, 248, 0.65);
+    box-shadow: 0 0 60px rgba(56, 189, 248, 0.4), inset 0 0 25px rgba(56, 189, 248, 0.15);
+    padding: 2.2rem 4rem;
+    border-radius: 2.5rem;
     display: none;
     align-items: center;
-    gap: 1.5rem;
-    backdrop-filter: blur(20px);
+    gap: 2.2rem;
+    backdrop-filter: blur(25px);
     z-index: 20;
+    margin: 1.2rem 0;
     animation: bannerPop 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
 
@@ -322,12 +353,12 @@ body.tv-mode {
 }
 
 @keyframes bannerPop {
-    from { opacity: 0; transform: translateY(-50%) scale(0.8); }
-    to { opacity: 1; transform: translateY(-50%) scale(1); }
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 .inst-icon {
-    font-size: 3.5rem;
+    font-size: 4rem;
     animation: rockGuitar 1.5s infinite ease-in-out;
 }
 
@@ -339,35 +370,63 @@ body.tv-mode {
 .inst-info {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.4rem;
+    align-items: center;
+    text-align: center;
 }
 
 .inst-title {
     font-family: var(--font-heading);
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 800;
     color: #ffffff;
     letter-spacing: 0.05em;
+    text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
 }
 
 .inst-countdown-box {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.2rem;
 }
 
 .inst-dots {
     color: var(--accent-karaoke);
-    letter-spacing: 0.3rem;
-    font-size: 1.2rem;
+    letter-spacing: 0.35rem;
+    font-size: 1.4rem;
+    animation: pulseDots 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseDots {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; text-shadow: 0 0 15px #38bdf8; }
 }
 
 .inst-timer {
     font-family: var(--font-heading);
-    font-size: 2.2rem;
+    font-size: 2.6rem;
     font-weight: 900;
     color: #38bdf8;
-    text-shadow: 0 0 15px var(--accent-karaoke);
+    text-shadow: 0 0 25px var(--accent-karaoke);
+}
+
+.inst-next-preview {
+    margin-top: 0.9rem;
+    font-size: 1.35rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 700;
+    max-width: 650px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-top: 0.85rem;
+}
+
+.inst-next-preview .next-tag {
+    color: var(--accent-karaoke);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 900;
+    margin-right: 0.6rem;
 }
 
 /* Placeholder */

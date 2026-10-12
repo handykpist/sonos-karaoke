@@ -377,23 +377,37 @@ class SonosTracker:
 
         data = self.query_speaker(spk["ip"])
 
-        # Auto-switch to active room if current room is stopped/idle but another is playing
-        if data["state"] != "PLAYING":
+        # Auto-switch to active room if current room has no track or is stopped/idle, and another is active
+        if data["state"] != "PLAYING" or not data["title"]:
             with self.lock:
                 other_speakers = [s for s in self.speakers if s["name"] != spk["name"]]
+
+            candidate = None
+            candidate_data = None
             for other in other_speakers:
                 other_data = self.query_speaker(other["ip"])
+                # Highest priority: other speaker is actively PLAYING a track
                 if other_data["state"] == "PLAYING" and other_data["title"]:
-                    spk = other
-                    data = other_data
-                    self.set_active_room(spk["name"])
+                    candidate = other
+                    candidate_data = other_data
                     break
+                # Second priority: other speaker has a track loaded (e.g. PAUSED_PLAYBACK)
+                elif other_data["title"] and not candidate:
+                    candidate = other
+                    candidate_data = other_data
+
+            if candidate and (candidate_data["state"] == "PLAYING" or not data["title"]):
+                spk = candidate
+                data = candidate_data
+                self.set_active_room(spk["name"])
 
         now = time.time()
         track_changed = False
         with self.lock:
             prev_title = self.current_state["title"]
             prev_artist = self.current_state["artist"]
+            prev_pos = self.current_state["position"]
+            prev_state = self.current_state["state"]
 
             self.current_state["room"] = spk["name"]
             self.current_state["ip"] = spk["ip"]
@@ -402,17 +416,22 @@ class SonosTracker:
             self.current_state["duration"] = data["duration"]
             self.current_state["album"] = data["album"]
             self.current_state["albumArt"] = data["albumArt"]
-            self.current_state["syncTime"] = now
+
+            # Update syncTime when position ticks, playback state changes, or track changes
+            if data["position"] != prev_pos or data["state"] != prev_state or data["title"] != prev_title or not self.current_state["syncTime"]:
+                self.current_state["syncTime"] = now
 
             if data["title"] != prev_title or data["artist"] != prev_artist:
                 self.current_state["title"] = data["title"]
                 self.current_state["artist"] = data["artist"]
+                self.current_state["lyrics"] = None
                 track_changed = True
 
         if track_changed and data["title"]:
             lyrics = fetch_lyrics(data["title"], data["artist"], data["duration"], data["album"])
             with self.lock:
-                self.current_state["lyrics"] = lyrics
+                if self.current_state["title"] == data["title"]:
+                    self.current_state["lyrics"] = lyrics
 
     def get_state(self):
         with self.lock:

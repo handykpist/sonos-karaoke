@@ -55,46 +55,62 @@ def parse_lrc(lrc_text: str, duration: float = 0) -> list:
     if not raw_lines:
         return []
 
-    lines = []
-    # Process lines and assign end times
+    processed = []
     for i in range(len(raw_lines)):
         t, text = raw_lines[i]
         next_t = raw_lines[i + 1][0] if i + 1 < len(raw_lines) else (duration if duration > t else t + 5.0)
-        lines.append({
+
+        # Empty line in LRC signals end of previous line or start of instrumental break
+        if not text:
+            if next_t - t >= 3.5:
+                processed.append({
+                    "type": "break",
+                    "time": t,
+                    "endTime": round(next_t, 2),
+                    "text": "🎸 Instrumental Solo / Break",
+                    "duration": round(next_t - t, 1)
+                })
+            continue
+
+        line_duration = next_t - t
+        # If there is a large gap (>10s) before the next lyric, split into line + break
+        if line_duration > 10.0:
+            actual_end = round(t + 6.0, 2)
+            processed.append({
+                "type": "lyric",
+                "time": t,
+                "endTime": actual_end,
+                "text": text
+            })
+            processed.append({
+                "type": "break",
+                "time": actual_end,
+                "endTime": round(next_t, 2),
+                "text": "🎸 Instrumental Break",
+                "duration": round(next_t - actual_end, 1)
+            })
+            continue
+        else:
+            actual_end = round(next_t, 2)
+
+        processed.append({
             "type": "lyric",
             "time": t,
-            "endTime": round(next_t, 2),
+            "endTime": actual_end,
             "text": text
         })
 
-    # Filter out empty or duplicate lines, and detect instrumental breaks
+    # Add initial intro break if song takes a while before first lyric
     enriched = []
-    for i, line in enumerate(lines):
-        # Insert initial intro break if song takes a while before singing
-        if i == 0 and line["time"] > 7.0:
-            enriched.append({
-                "type": "break",
-                "time": 0.0,
-                "endTime": line["time"],
-                "text": "🎵 Intro",
-                "duration": line["time"]
-            })
-
-        enriched.append(line)
-
-        # Insert instrumental break between lines if gap > 8 seconds
-        if i < len(lines) - 1:
-            next_line = lines[i + 1]
-            gap = next_line["time"] - line["endTime"]
-            if gap > 8.0:
-                enriched.append({
-                    "type": "break",
-                    "time": line["endTime"],
-                    "endTime": next_line["time"],
-                    "text": "🎸 Instrumental Break",
-                    "duration": round(gap, 1)
-                })
-
+    if processed and processed[0]["time"] > 4.0:
+        enriched.append({
+            "type": "break",
+            "time": 0.0,
+            "endTime": processed[0]["time"],
+            "text": "🎵 Intro",
+            "duration": processed[0]["time"]
+        })
+    enriched.extend(processed)
     return enriched
 
 def estimate_timing_for_plain(plain_text: str, duration: float) -> list:
@@ -141,6 +157,8 @@ def fetch_lyrics(title: str, artist: str, duration: float = 0, album: str = "") 
             with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if data.get("found"):
+                    if data.get("raw") and data.get("synced"):
+                        data["lines"] = parse_lrc(data["raw"], duration)
                     return data
         except Exception:
             pass

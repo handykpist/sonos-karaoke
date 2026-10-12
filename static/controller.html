@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 </head>
 <body>
     <div class="app-layout">
@@ -44,7 +45,11 @@
                 </div>
 
                 <div class="quick-tv-buttons">
-                    <a href="/tv" target="_blank" class="btn-primary-action">
+                    <button id="btn-browser-cast" class="btn-primary-action btn-cast-native-highlight">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm20-7H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+                        <span>Cast to TV (Chrome / Display)</span>
+                    </button>
+                    <a href="/tv" target="_blank" class="btn-secondary-action">
                         <span>Launch Fullscreen TV View</span>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z"/></svg>
                     </a>

@@ -120,6 +120,7 @@ class KaraokeHandler(SimpleHTTPRequestHandler):
         elif path == "/api/displays":
             displays = self.server.cast_mgr.get_all_displays()
             displays["tvUrl"] = f"http://{LOCAL_IP}:{PORT}/tv"
+            displays["localTvUrl"] = f"http://localhost:{PORT}/tv"
             self.send_json(displays)
             return
 
@@ -335,6 +336,7 @@ def run_server():
     print("=" * 60)
     print(f"      Sonos Karaoke Server active on port {PORT}")
     print(f"      TV Cast URL:      http://{LOCAL_IP}:{PORT}/tv")
+    print(f"      Local TV URL:     http://localhost:{PORT}/tv")
     print(f"      Controller URL:   http://{LOCAL_IP}:{PORT}/controller")
     print("=" * 60)
     try:

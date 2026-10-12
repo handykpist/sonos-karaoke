@@ -278,6 +278,65 @@ function syncLoop() {
 // Dynamic Cast Devices
 let activeCastingDevices = new Set();
 
+// Native Browser & Presentation Casting Support
+async function startNativeBrowserCast(targetDeviceName = "") {
+    const tvUrl = `${window.location.protocol}//${window.location.host}/tv`;
+
+    // 1. Try W3C Presentation API (Opens Chrome's native Cast device picker, even in standalone app mode)
+    if (window.PresentationRequest) {
+        try {
+            const request = new PresentationRequest([tvUrl]);
+            const connection = await request.start();
+            console.log("Presentation connected to display:", connection);
+            return;
+        } catch (err) {
+            if (err.name === 'AbortError' || err.name === 'NotAllowedError') {
+                return; // User cancelled the picker dialog
+            }
+            console.warn("PresentationRequest notice:", err);
+        }
+    }
+
+    // 2. Try Google Cast Sender SDK if loaded
+    if (window.cast && window.cast.framework) {
+        try {
+            await cast.framework.CastContext.getInstance().requestSession();
+            return;
+        } catch (e) {
+            console.warn("Cast SDK requestSession notice:", e);
+        }
+    }
+
+    // 3. Fallback guide for Smart TVs (Samsung QLED, etc.)
+    const promptMsg = targetDeviceName ? 
+        `To cast to '${targetDeviceName}':\n\nClick OK to open the TV Screen in Google Chrome. In Chrome, click the 3 dots (or right-click) and select 'Cast...' to cast directly to your TV.` :
+        "To cast to your Samsung TV, Chromecast, or Smart Display:\n\nClick OK to open the TV Screen in Google Chrome. In Chrome, click the 3 dots (or right-click) and select 'Cast...' to cast directly to your TV.";
+    
+    if (confirm(promptMsg)) {
+        window.open(tvUrl, "_blank");
+    }
+}
+
+// Google Cast Framework Initialization
+window['__onGCastApiAvailable'] = function(isAvailable) {
+    if (isAvailable && window.cast && window.cast.framework) {
+        try {
+            cast.framework.CastContext.getInstance().setOptions({
+                receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                autoJoinPolicy: chrome.cast.AutoJoinPolicy.TAB_AND_ORIGIN_SCOPED
+            });
+            console.log("Google Cast Framework active on Controller");
+        } catch (e) {
+            console.warn("Cast setup notice:", e);
+        }
+    }
+};
+
+const btnBrowserCast = document.getElementById("btn-browser-cast");
+if (btnBrowserCast) {
+    btnBrowserCast.addEventListener("click", () => startNativeBrowserCast());
+}
+
 async function loadDisplays() {
     try {
         const res = await fetch("/api/displays");
@@ -301,17 +360,25 @@ async function loadDisplays() {
                 const card = document.createElement("div");
                 card.className = "device-card";
                 const isCasting = activeCastingDevices.has(dev.name);
+                const isBrowserCastNeeded = dev.requires_browser_cast;
+
                 card.innerHTML = `
-                    <div class="device-icon">📡</div>
+                    <div class="device-icon">${isBrowserCastNeeded ? "📺" : "📡"}</div>
                     <div class="device-info">
                         <div class="device-name">${dev.name}</div>
-                        <div class="device-status" id="status-${dev.id}">${isCasting ? "Casting Active" : "Ready to Cast"}</div>
+                        <div class="device-status" id="status-${dev.id}">${isCasting ? "Casting Active" : (isBrowserCastNeeded ? "Smart TV (Chrome Cast)" : "Ready to Cast")}</div>
                     </div>
-                    <button class="btn-cast-action" style="${isCasting ? 'background: #ef4444; color: #fff;' : ''}">${isCasting ? "Stop" : "Cast"}</button>
+                    <button class="btn-cast-action" style="${isCasting ? 'background: #ef4444; color: #fff;' : ''}">${isCasting ? "Stop" : (isBrowserCastNeeded ? "Cast to TV" : "Cast")}</button>
                 `;
                 const btn = card.querySelector("button");
                 const statusEl = card.querySelector(`#status-${dev.id}`);
-                btn.addEventListener("click", () => toggleCastDevice(dev.name, btn, statusEl));
+                btn.addEventListener("click", () => {
+                    if (isBrowserCastNeeded) {
+                        startNativeBrowserCast(dev.name);
+                    } else {
+                        toggleCastDevice(dev.name, btn, statusEl);
+                    }
+                });
                 castCards.appendChild(card);
             });
         }
@@ -343,6 +410,9 @@ async function toggleCastDevice(deviceName, btn, statusEl) {
             } else {
                 if (statusEl) statusEl.textContent = `Cast notice: ${data.error}`;
                 btn.textContent = "Cast";
+                if (data.error && data.error.includes("Browser Casting")) {
+                    startNativeBrowserCast(deviceName);
+                }
             }
         } catch (e) {
             if (statusEl) statusEl.textContent = "Connection error";

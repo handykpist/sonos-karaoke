@@ -179,6 +179,41 @@ body {
     transform: translateY(-2px);
 }
 
+.btn-cast-native-highlight {
+    background: linear-gradient(135deg, #f59e0b, #eab308);
+    color: #0f172a;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+.btn-cast-native-highlight:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+}
+
+.btn-secondary-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    text-decoration: none;
+    margin-top: 0.5rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.btn-secondary-action:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
 /* QR Code Section */
 .qr-container {
     display: flex;

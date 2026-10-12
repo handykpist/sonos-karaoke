@@ -761,6 +761,26 @@ async function initAudioContext() {
 
 async function startMicrophone() {
     try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (!isLocal) {
+                const localUrl = `http://localhost:${location.port || '5050'}${location.pathname}${location.search}`;
+                const switchLocal = confirm(
+                    "🎤 Microphone Security Notice:\n\n" +
+                    "Web browsers only allow microphone hardware access on 'localhost' or via 'HTTPS' (not plain LAN IP addresses like " + location.hostname + ").\n\n" +
+                    "If you are on the karaoke computer, click OK to switch to http://localhost:5050/tv where the microphone is fully enabled."
+                );
+                if (switchLocal) {
+                    window.location.href = localUrl;
+                    return;
+                }
+            } else {
+                alert("Microphone is not supported in this browser context.\n\nPlease open the karaoke screen in Google Chrome on http://localhost:5050/tv.");
+            }
+            if (micMasterToggle) micMasterToggle.checked = false;
+            return;
+        }
+
         await initAudioContext();
 
         const constraints = {
@@ -824,7 +844,11 @@ async function startMicrophone() {
         enumerateMicDevices();
     } catch (err) {
         console.error("Microphone activation failed:", err);
-        alert("Could not access microphone: " + (err.message || err));
+        let msg = err.message || String(err);
+        if (msg.includes("Permission denied") || msg.includes("NotAllowedError")) {
+            msg = "Microphone permission was denied. Please allow microphone access in your browser settings (click the tune/camera icon in Chrome's address bar).";
+        }
+        alert("Could not access microphone: " + msg);
         isMicActive = false;
         updateMicUI();
     }
@@ -937,9 +961,31 @@ async function enumerateMicDevices() {
     } catch (e) {}
 }
 
+// Mic Security Context Notice Helper
+function updateMicSecurityNotice() {
+    const warning = document.getElementById("mic-security-warning");
+    const originCode = document.getElementById("mic-current-origin");
+    const switchLocalBtn = document.getElementById("mic-switch-localhost-btn");
+    
+    if (originCode) originCode.textContent = location.host;
+    
+    const isSecure = window.isSecureContext && navigator.mediaDevices && !!navigator.mediaDevices.getUserMedia;
+    if (warning) {
+        if (!isSecure) {
+            warning.style.display = "block";
+            if (switchLocalBtn) {
+                switchLocalBtn.href = `http://localhost:${location.port || '5050'}${location.pathname}${location.search}`;
+            }
+        } else {
+            warning.style.display = "none";
+        }
+    }
+}
+
 // Mic Event Listeners
 if (btnMic) {
     btnMic.addEventListener("click", () => {
+        updateMicSecurityNotice();
         micModal.classList.add("open");
         updateMicUI();
         enumerateMicDevices();
@@ -1273,6 +1319,62 @@ if (lyricsLangSelect) {
     });
 }
 
+// Browser Cast Support (Presentation API & Google Cast)
+async function startTvBrowserCast() {
+    const tvUrl = `${window.location.protocol}//${window.location.host}/tv`;
+    
+    // 1. Try W3C Presentation API (Opens Chrome's native device picker)
+    if (window.PresentationRequest) {
+        try {
+            const req = new PresentationRequest([tvUrl]);
+            const conn = await req.start();
+            console.log("TV Presentation started:", conn);
+            return;
+        } catch (e) {
+            if (e.name === 'AbortError' || e.name === 'NotAllowedError') return;
+            console.warn("PresentationRequest notice:", e);
+        }
+    }
+
+    // 2. Try Google Cast SDK if available
+    if (window.cast && window.cast.framework) {
+        try {
+            await cast.framework.CastContext.getInstance().requestSession();
+            return;
+        } catch (e) {
+            console.warn("CastContext notice:", e);
+        }
+    }
+
+    // 3. Fallback guide for Smart TVs (Samsung QLED, etc.)
+    alert(
+        "📺 Casting Instructions:\n\n" +
+        "• To cast to Samsung QLED, Chromecast, or Google TV:\n" +
+        "  Open this page in Google Chrome, click Chrome's 3-dot menu (or right-click) and select 'Cast...'.\n" +
+        "• Choose your TV ('75\" QLED' or Chromecast) and select 'Cast tab'."
+    );
+}
+
+const btnCastTv = document.getElementById("btn-cast-tv");
+if (btnCastTv) {
+    btnCastTv.addEventListener("click", startTvBrowserCast);
+}
+
+// Google Cast Framework Initialization
+window['__onGCastApiAvailable'] = function(isAvailable) {
+    if (isAvailable && window.cast && window.cast.framework) {
+        try {
+            cast.framework.CastContext.getInstance().setOptions({
+                receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                autoJoinPolicy: chrome.cast.AutoJoinPolicy.TAB_AND_ORIGIN_SCOPED
+            });
+            console.log("Google Cast Framework active on TV screen");
+        } catch (e) {
+            console.warn("Cast setup notice:", e);
+        }
+    }
+};
+
 // Keyboard shortcuts
 window.addEventListener("keydown", (e) => {
     // Prevent interfering with modal inputs
@@ -1282,6 +1384,8 @@ window.addEventListener("keydown", (e) => {
 
     if (e.key === "f" || e.key === "F") {
         toggleFullscreen();
+    } else if (e.key === "c" || e.key === "C") {
+        startTvBrowserCast();
     } else if (e.key === "q" || e.key === "Q") {
         if (qrModal) qrModal.classList.toggle("open");
     } else if (e.key === "l" || e.key === "L") {

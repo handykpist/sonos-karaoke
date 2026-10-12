@@ -331,6 +331,7 @@ function syncLoop() {
 
     if (currentLyrics.length > 0) {
         updateStageForTime(curTime);
+        updateActiveLineWords(curTime);
     }
 
     requestAnimationFrame(syncLoop);
@@ -451,6 +452,99 @@ function updateStageForTime(curTime) {
     }
 }
 
+function prepareLineWords(text, startTime, endTime) {
+    if (!text || !text.trim()) return [];
+    const rawWords = text.trim().split(/\s+/);
+    if (rawWords.length === 0) return [];
+
+    const duration = Math.max(0.5, endTime - startTime);
+
+    // Compute weights based on word character length for natural singing speech cadence
+    const weights = rawWords.map(w => {
+        const clean = w.replace(/[^a-zA-Z0-9åäöÅÄÖéèêëáíóúñüß]/g, "");
+        return Math.max(1.0, Math.pow(clean.length || 1, 0.75));
+    });
+
+    const totalWeight = weights.reduce((acc, w) => acc + w, 0);
+
+    let cur = startTime;
+    return rawWords.map((word, idx) => {
+        const wDur = (weights[idx] / totalWeight) * duration;
+        const wStart = cur;
+        const wEnd = cur + wDur;
+        cur = wEnd;
+        return {
+            word: word,
+            startTime: wStart,
+            endTime: wEnd
+        };
+    });
+}
+
+function buildActiveLineWordElements(el, rawText, startTime, endTime) {
+    const words = prepareLineWords(rawText, startTime, endTime);
+    if (words.length === 0) {
+        el.innerHTML = `<span class="now-sing-badge"><span class="mic-wave">🎤</span> SING NOW</span><span class="glow-word">${rawText}</span>`;
+        return;
+    }
+
+    el.innerHTML = "";
+    const badge = document.createElement("span");
+    badge.className = "now-sing-badge";
+    badge.innerHTML = `<span class="mic-wave">🎤</span> SING NOW`;
+    el.appendChild(badge);
+
+    const container = document.createElement("div");
+    container.className = "karaoke-words-container";
+
+    words.forEach(w => {
+        const item = document.createElement("span");
+        item.className = "karaoke-word-item word-state-upcoming";
+        item.dataset.startTime = w.startTime;
+        item.dataset.endTime = w.endTime;
+
+        const dot = document.createElement("span");
+        dot.className = "karaoke-word-dot";
+
+        const text = document.createElement("span");
+        text.className = "karaoke-word-text";
+        text.textContent = w.word;
+
+        item.appendChild(dot);
+        item.appendChild(text);
+        container.appendChild(item);
+    });
+
+    el.appendChild(container);
+}
+
+function updateActiveLineWords(curTime) {
+    const activeEl = lyricsTrack.querySelector(".lyric-line.active");
+    if (!activeEl) return;
+
+    const wordEls = activeEl.querySelectorAll(".karaoke-word-item");
+    if (wordEls.length === 0) return;
+
+    wordEls.forEach(wEl => {
+        const s = parseFloat(wEl.dataset.startTime);
+        const e = parseFloat(wEl.dataset.endTime);
+
+        if (curTime >= e) {
+            if (!wEl.classList.contains("word-state-sung")) {
+                wEl.className = "karaoke-word-item word-state-sung";
+            }
+        } else if (curTime >= s && curTime < e) {
+            if (!wEl.classList.contains("word-state-singing")) {
+                wEl.className = "karaoke-word-item word-state-singing";
+            }
+        } else {
+            if (!wEl.classList.contains("word-state-upcoming")) {
+                wEl.className = "karaoke-word-item word-state-upcoming";
+            }
+        }
+    });
+}
+
 function applyLineClasses(activeIdx) {
     const lineEls = lyricsTrack.querySelectorAll(".lyric-line");
     if (lineEls.length === 0) return;
@@ -462,7 +556,12 @@ function applyLineClasses(activeIdx) {
         if (idx === activeIdx) {
             el.classList.add("active");
             if (raw.trim()) {
-                el.innerHTML = `<span class="now-sing-badge"><span class="mic-wave">🎤</span> SING NOW</span><span class="glow-word">${raw}</span>`;
+                const lineItem = currentLyrics[idx];
+                const startTime = lineItem ? lineItem.time : 0;
+                const endTime = lineItem ? lineItem.endTime : (startTime + 4.0);
+                if (!el.querySelector(".karaoke-words-container")) {
+                    buildActiveLineWordElements(el, raw, startTime, endTime);
+                }
             }
         } else {
             el.textContent = raw;

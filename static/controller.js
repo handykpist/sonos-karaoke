@@ -140,8 +140,78 @@ function renderLyricsPreview(lines) {
         div.dataset.index = idx;
         div.dataset.time = l.time;
         div.dataset.endTime = l.endTime;
+        div.dataset.rawText = l.text;
         div.textContent = l.text;
         lyricsPreviewTrack.appendChild(div);
+    });
+}
+
+function buildControllerLineWords(el, rawText, startTime, endTime) {
+    const rawWords = rawText.trim().split(/\s+/);
+    if (rawWords.length === 0) {
+        el.textContent = rawText;
+        return;
+    }
+    const duration = Math.max(0.5, endTime - startTime);
+    const weights = rawWords.map(w => {
+        const clean = w.replace(/[^a-zA-Z0-9åäöÅÄÖéèêëáíóúñüß]/g, "");
+        return Math.max(1.0, Math.pow(clean.length || 1, 0.75));
+    });
+    const totalWeight = weights.reduce((acc, w) => acc + w, 0);
+
+    el.innerHTML = "";
+    const container = document.createElement("div");
+    container.className = "karaoke-words-container";
+
+    let cur = startTime;
+    rawWords.forEach((word, idx) => {
+        const wDur = (weights[idx] / totalWeight) * duration;
+        const wStart = cur;
+        const wEnd = cur + wDur;
+        cur = wEnd;
+
+        const item = document.createElement("span");
+        item.className = "karaoke-word-item word-state-upcoming";
+        item.dataset.startTime = wStart;
+        item.dataset.endTime = wEnd;
+
+        const dot = document.createElement("span");
+        dot.className = "karaoke-word-dot";
+
+        const text = document.createElement("span");
+        text.className = "karaoke-word-text";
+        text.textContent = word;
+
+        item.appendChild(dot);
+        item.appendChild(text);
+        container.appendChild(item);
+    });
+
+    el.appendChild(container);
+}
+
+function updateControllerLineWords(curTime) {
+    const activeEl = lyricsPreviewTrack.querySelector(".preview-line.active");
+    if (!activeEl) return;
+    const wordEls = activeEl.querySelectorAll(".karaoke-word-item");
+    if (wordEls.length === 0) return;
+
+    wordEls.forEach(wEl => {
+        const s = parseFloat(wEl.dataset.startTime);
+        const e = parseFloat(wEl.dataset.endTime);
+        if (curTime >= e) {
+            if (!wEl.classList.contains("word-state-sung")) {
+                wEl.className = "karaoke-word-item word-state-sung";
+            }
+        } else if (curTime >= s && curTime < e) {
+            if (!wEl.classList.contains("word-state-singing")) {
+                wEl.className = "karaoke-word-item word-state-singing";
+            }
+        } else {
+            if (!wEl.classList.contains("word-state-upcoming")) {
+                wEl.className = "karaoke-word-item word-state-upcoming";
+            }
+        }
     });
 }
 
@@ -179,16 +249,27 @@ function syncLoop() {
                 el.classList.remove("active", "past", "next-line", "distant");
                 if (idx === activeIndex) {
                     el.classList.add("active");
+                    const raw = el.dataset.rawText || el.textContent;
+                    const startTime = parseFloat(el.dataset.time) || 0;
+                    const endTime = parseFloat(el.dataset.endTime) || (startTime + 4.0);
+                    if (!el.querySelector(".karaoke-words-container")) {
+                        buildControllerLineWords(el, raw, startTime, endTime);
+                    }
                     el.scrollIntoView({ behavior: "smooth", block: "center" });
-                } else if (idx === activeIndex - 1) {
-                    el.classList.add("past");
-                } else if (idx === activeIndex + 1) {
-                    el.classList.add("next-line");
                 } else {
-                    el.classList.add("distant");
+                    if (el.dataset.rawText) el.textContent = el.dataset.rawText;
+                    if (idx === activeIndex - 1) {
+                        el.classList.add("past");
+                    } else if (idx === activeIndex + 1) {
+                        el.classList.add("next-line");
+                    } else {
+                        el.classList.add("distant");
+                    }
                 }
             });
         }
+
+        updateControllerLineWords(curTime);
     }
 
     requestAnimationFrame(syncLoop);

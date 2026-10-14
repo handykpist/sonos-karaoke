@@ -17,6 +17,8 @@ CHROME_FLAGS=(
     --app="$TARGET_URL"
     --class="sonos-karaoke"
     --window-size=1280,840
+    --password-store=basic
+    --use-mock-keychain
     --enable-features=MediaRouter,PresentationAPI
     --unsafely-treat-insecure-origin-as-secure="$ORIGINS"
 )
